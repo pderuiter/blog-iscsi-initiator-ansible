@@ -1,0 +1,63 @@
+---
+- name: Install iSCSI packages
+  ansible.builtin.apt:
+    name:
+      - open-iscsi
+      - multipath-tools  # Optional for multipathing
+    state: present
+    update_cache: true
+
+- name: Deploy iSCSI configuration file
+  ansible.builtin.template:
+    src: templates/iscsid.conf.j2
+    dest: /etc/iscsi/iscsid.conf
+    owner: root
+    group: root
+    mode: '0644'
+  no_log: true  # the rendered file contains the CHAP password
+  notify: Restart iscsid
+
+- name: Set unique iSCSI initiator name
+  ansible.builtin.template:
+    src: templates/initiatorname.iscsi.j2
+    dest: /etc/iscsi/initiatorname.iscsi
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart iscsid
+
+- name: Enable iSCSI services at boot
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - iscsid
+    - open-iscsi
+
+- name: Restart iscsid now so it picks up the new initiator name
+  ansible.builtin.meta: flush_handlers
+
+- name: Discover iSCSI targets
+  ansible.builtin.command:
+    cmd: "iscsiadm -m discovery -t st -p {{ iscsi_target_ip }}"
+  register: iscsi_discovery
+  changed_when: false
+
+- name: Check active iSCSI sessions
+  ansible.builtin.command:
+    cmd: "iscsiadm -m session"
+  register: iscsi_sessions
+  changed_when: false
+  failed_when: iscsi_sessions.rc not in [0, 21]  # 21 = no active sessions
+
+- name: Log in to iSCSI target
+  ansible.builtin.command:
+    cmd: "iscsiadm -m node -T {{ iscsi_target_name }} -p {{ iscsi_target_ip }} --login"
+  register: iscsi_login
+  changed_when: "'successful' in iscsi_login.stdout"
+  when: (iscsi_target_ip ~ ':3260') not in iscsi_sessions.stdout
+
+- name: Set iSCSI login to persist across reboots
+  ansible.builtin.command:
+    cmd: "iscsiadm -m node -T {{ iscsi_target_name }} -p {{ iscsi_target_ip }} --op=update --name=node.startup --value=automatic"
+  changed_when: false

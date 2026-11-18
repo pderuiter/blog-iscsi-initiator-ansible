@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: iscsi_initiator
+  namespace: blog
+  author: Patrick de Ruiter
+  description: open-iscsi initiator with a unique IQN, CHAP and persistent login (the playbook from the blog post as a role)
+  license: MIT
+  min_ansible_version: "2.17"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - iscsi
+    - storage
+dependencies: []

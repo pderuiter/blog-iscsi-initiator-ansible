@@ -1,0 +1,12 @@
+---
+- name: Configure iSCSI target
+  hosts: iscsi_targets
+  become: true
+  roles:
+    - iscsi_target
+
+- name: Configure iSCSI Initiator
+  hosts: iscsi_initiators
+  become: true
+  roles:
+    - iscsi_initiator

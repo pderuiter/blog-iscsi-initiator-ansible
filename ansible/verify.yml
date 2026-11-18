@@ -1,0 +1,34 @@
+---
+# The checks from section 6 of the blog post, as assertions. Read-only.
+- name: Verify the iSCSI initiators
+  hosts: iscsi_initiators
+  become: true
+  tasks:
+    - name: Check active sessions
+      ansible.builtin.command:
+        cmd: iscsiadm -m session
+      register: verify_sessions
+      changed_when: false
+
+    - name: Check attached LUNs
+      ansible.builtin.command:
+        cmd: lsblk --noheadings --nodeps --output NAME,SIZE,TRAN
+      register: verify_lsblk
+      changed_when: false
+
+    - name: Read the node record
+      ansible.builtin.slurp:
+        src: "/etc/iscsi/nodes/{{ iscsi_target_name }}/{{ iscsi_target_ip }},3260,1/default"
+      register: verify_node_record
+
+    - name: Assert the session, the LUN and automatic login
+      ansible.builtin.assert:
+        that:
+          - (iscsi_target_ip ~ ':3260,1 ' ~ iscsi_target_name) in verify_sessions.stdout
+          - verify_lsblk.stdout is search('iscsi')
+          - (verify_node_record.content | b64decode) is search('node.startup = automatic')
+        quiet: true
+
+    - name: Show the session
+      ansible.builtin.debug:
+        var: verify_sessions.stdout_lines

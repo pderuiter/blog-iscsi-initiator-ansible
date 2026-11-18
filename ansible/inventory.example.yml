@@ -1,0 +1,15 @@
+---
+# Copy to inventory.yml (or use `terraform output -raw ansible_inventory`).
+# The initiator IQN is derived from the inventory hostname: iqn.2025-03.com.example:<hostname>.
+all:
+  vars:
+    ansible_user: ansible
+  children:
+    iscsi_targets:
+      hosts:
+        storage01:
+          ansible_host: 10.0.10.11
+    iscsi_initiators:
+      hosts:
+        node01:
+          ansible_host: 10.0.10.21
