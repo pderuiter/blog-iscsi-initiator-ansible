@@ -13,7 +13,7 @@
     dest: /etc/iscsi/iscsid.conf
     owner: root
     group: root
-    mode: '0644'
+    mode: '0600'  # root only: the file contains the CHAP password
   no_log: true  # the rendered file contains the CHAP password
   notify: Restart iscsid
 
